@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photobooth App - Free & Unlimited</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { 
+            font-family: 'Quicksand', sans-serif; 
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+        .pink-gradient { 
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.0) 0%, #f4aec4 100%); 
+        }
+        .bg-soft-white {
+            background-color: #f8f8f8;
+        }
+        /* Hidden mobile menu nav */
+        @media (max-width: 767px) {
+            .desktop-nav {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <section class="relative min-h-screen flex flex-col items-center justify-center text-center p-4 bg-pink-50">
+        <div class="absolute inset-0 pink-gradient"></div>
+        <header class="absolute top-0 w-full p-4 md:p-8">
+            <nav class="flex justify-between items-center max-w-4xl mx-auto">
+                <span class="text-xl font-bold text-gray-800">photobooth.io</span>
+                <div class="desktop-nav hidden md:flex items-center space-x-6 text-gray-600 font-semibold">
+                    <a href="#how-it-works" class="hover:text-pink-500 transition-colors">Cara Kerja</a>
+                    <a href="#features" class="hover:text-pink-500 transition-colors">Fitur</a>
+                    <a href="#gallery" class="hover:text-pink-500 transition-colors">Galeri</a>
+                    <a href="#testimonials" class="hover:text-pink-500 transition-colors">Testimoni</a>
+                </div>
+            </nav>
+        </header>
+        <main class="relative z-10 flex-1 flex flex-col justify-center items-center">
+            <h1 class="text-5xl md:text-7xl font-bold text-gray-800">photobooth</h1>
+            <p class="mt-2 text-xl md:text-2xl text-gray-600 max-w-md">Capture the moment, cherish the magic, relive the love</p>
+            <a href="editor.html" class="mt-8 inline-block px-12 py-4 bg-pink-400 text-white text-xl font-bold rounded-full shadow-lg hover:bg-pink-500 transition-all duration-300 transform hover:scale-105">
+                START 📸
+            </a>
+        </main>
+    </section>
+    <section id="how-it-works" class="flex flex-col items-center justify-center py-16 bg-white">
+        <div class="max-w-4xl mx-auto px-4 text-center w-full">
+            <h2 class="text-4xl font-bold mb-12 text-gray-800">Cara Kerjanya?</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-gray-700">
+                <div class="flex flex-col items-center p-6">
+                    <div class="w-16 h-16 rounded-full bg-pink-200 flex items-center justify-center text-pink-500 mb-4">
+                        <span class="text-3xl font-bold">1</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">Pilih Layout</h3>
+                    <p class="text-sm">Pilih layout favoritmu untuk strip foto yang akan dibuat.</p>
+                </div>
+                <div class="flex flex-col items-center p-6">
+                    <div class="w-16 h-16 rounded-full bg-pink-200 flex items-center justify-center text-pink-500 mb-4">
+                        <span class="text-3xl font-bold">2</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">Ambil Foto</h3>
+                    <p class="text-sm">Ambil foto dari kamera perangkatmu dan lihat hasilnya secara langsung.</p>
+                </div>
+                <div class="flex flex-col items-center p-6">
+                    <div class="w-16 h-16 rounded-full bg-pink-200 flex items-center justify-center text-pink-500 mb-4">
+                        <span class="text-3xl font-bold">3</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">Simpan & Bagikan</h3>
+                    <p class="text-sm">Unduh hasil fotomu dalam format digital, siap untuk diunggah di media sosial!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="features" class="min-h-screen flex flex-col items-center justify-center bg-soft-white py-16">
+        <div class="max-w-4xl mx-auto px-4 text-center w-full">
+            <h2 class="text-4xl font-bold mb-12 text-gray-800">Kenapa Kami?</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 text-gray-700">
+                <div class="p-6 rounded-2xl border-2 border-dashed border-gray-400 flex flex-col items-center bg-white">
+                    <div class="w-16 h-16 rounded-full bg-pink-200 flex items-center justify-center text-pink-500 mb-4">
+                        <i class="fas fa-camera text-3xl"></i>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">Gratis & Tanpa Batas</h3>
+                    <p class="text-sm">Ambil foto sebanyak yang kamu mau, tanpa biaya, tanpa batasan!</p>
+                </div>
+                <div class="p-6 rounded-2xl border-2 border-dashed border-gray-400 flex flex-col items-center bg-white">
+                    <div class="w-16 h-16 rounded-full bg-pink-200 flex items-center justify-center text-pink-500 mb-4">
+                        <i class="fas fa-magic text-3xl"></i>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">Desain Aesthetic</h3>
+                    <p class="text-sm">Pilih dari berbagai layout dan tambahkan stiker lucu untuk personalisasi fotomu.</p>
+                </div>
+                <div class="p-6 rounded-2xl border-2 border-dashed border-gray-400 flex flex-col items-center bg-white">
+                    <div class="w-16 h-16 rounded-full bg-pink-200 flex items-center justify-center text-pink-500 mb-4">
+                        <i class="fas fa-mobile-alt text-3xl"></i>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">Akses Mudah</h3>
+                    <p class="text-sm">Langsung dari browser-mu, tanpa perlu instalasi aplikasi apapun!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="gallery" class="min-h-screen flex flex-col items-center justify-center bg-white py-16">
+        <div class="max-w-4xl mx-auto px-4 text-center w-full">
+            <h2 class="text-4xl font-bold mb-12 text-gray-800">Contoh Hasil Foto</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <img src="https://i.imgur.com/8Q6s2qM.png" alt="Contoh Foto 1" class="rounded-xl border-2 border-gray-400 transform hover:scale-105 transition-transform">
+                <img src="https://i.imgur.com/a4wz0pG.png" alt="Contoh Foto 2" class="rounded-xl border-2 border-gray-400 transform hover:scale-105 transition-transform">
+                <img src="https://i.imgur.com/b2t9m0P.png" alt="Contoh Foto 3" class="rounded-xl border-2 border-gray-400 transform hover:scale-105 transition-transform">
+                <img src="https://i.imgur.com/c8k3e5V.png" alt="Contoh Foto 4" class="rounded-xl border-2 border-gray-400 transform hover:scale-105 transition-transform">
+            </div>
+        </div>
+    </section>
+    <section id="testimonials" class="min-h-screen flex flex-col justify-center bg-soft-white py-16">
+        <div class="max-w-4xl mx-auto px-4 flex-1 flex flex-col justify-center w-full">
+            <h2 class="text-4xl font-bold text-center mb-12 text-gray-800">Apa Kata Mereka?</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="p-6 rounded-xl border-2 border-gray-400 bg-white">
+                    <p class="text-gray-700 text-lg mb-4">"Aplikasi ini benar-benar mengubah cara saya mengambil foto. Sangat mudah digunakan dan hasilnya luar biasa!"</p>
+                    <div class="flex items-center">
+                        <img src="https://i.imgur.com/T0b4uY3.png" alt="User 1" class="w-12 h-12 rounded-full mr-4">
+                        <div>
+                            <p class="font-bold">Siti Aisyah</p>
+                            <p class="text-sm text-gray-500">Mahasiswa</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 rounded-xl border-2 border-gray-400 bg-white">
+                    <p class="text-gray-700 text-lg mb-4">"Hasilnya sangat estetik dan lucu! Saya suka bisa langsung mengunduh foto tanpa perlu instal aplikasi."</p>
+                    <div class="flex items-center">
+                        <img src="https://i.imgur.com/Z4cRj2b.png" alt="User 2" class="w-12 h-12 rounded-full mr-4">
+                        <div>
+                            <p class="font-bold">Budi Santoso</p>
+                            <p class="text-sm text-gray-500">Kreator Konten</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer id="contact" class="bg-soft-white w-full py-8 border-t border-gray-200 mt-20">
+            <div class="max-w-4xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-sm text-gray-600">
+                <div class="text-center md:text-left mb-4 md:mb-0">
+                    <p>&copy; 2025 photobooth.io. All rights reserved.</p>
+                    <p>Dibuat dengan ❤️ untukmu.</p>
+                </div>
+                <div class="flex space-x-6 text-gray-500">
+                    <a href="https://www.instagram.com/arszlwfa" class="hover:text-pink-500 transition-colors" aria-label="Instagram"><i class="fab fa-instagram text-xl"></i></a>
+                    <a href="#" class="hover:text-pink-500 transition-colors" aria-label="TikTok"><i class="fab fa-tiktok text-xl"></i></a>
+                    <a href="#" class="hover:text-pink-500 transition-colors" aria-label="Twitter"><i class="fab fa-twitter text-xl"></i></a>
+                </div>
+            </div>
+        </footer>
+    </section>
+
+</body>
+</html>
