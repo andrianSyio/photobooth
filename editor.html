@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photobooth Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { font-family: 'Quicksand', sans-serif; background-color: #fce4ec; }
+        .photobooth-strip {
+            position: relative;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .photobooth-strip.is-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-auto-rows: 1fr;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            flex-direction: row;
+        }
+        .photo-frame {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            padding: 0.35rem;
+            box-sizing: border-box;
+            aspect-ratio: 4/3;
+        }
+        .photo-content {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            border-radius: 0.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #ddd;
+        }
+        .photo-content img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            touch-action: none;
+        }
+        .draggable-sticker {
+            position: absolute;
+            cursor: grab;
+            touch-action: none;
+            animation: fadeIn 0.3s ease-out;
+            object-fit: contain;
+            user-select: none;
+            transform: translate(-50%, -50%);
+        }
+        .blinking-text {
+            animation: blink 1.5s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .filter-grayscale { filter: grayscale(100%); }
+        .filter-sepia { filter: sepia(100%); }
+        .filter-saturate { filter: saturate(200%); }
+        .filter-contrast { filter: contrast(150%); }
+        .filter-invert { filter: invert(100%); }
+        .filter-brightness { filter: brightness(150%); }
+        .filter-hue-rotate { filter: hue-rotate(90deg); }
+        .filter-none { filter: none; }
+        #camera-stream { transform: scaleX(-1); }
+        .unduh-loading { animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .selected-sticker {
+            outline: 2px solid #f472b6;
+            border-radius: 4px;
+        }
+        .delete-zone-active {
+            animation: shake 0.5s infinite;
+        }
+        @keyframes shake {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        /* Mobile UI/UX Changes */
+        .mobile-layout-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .mobile-header {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            width: 100%;
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+        }
+        .modal {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 60;
+            max-height: 80vh;
+            overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-out;
+        }
+        .modal.active {
+            transform: translateY(0);
+        }
+        .modal-content {
+            border-top-left-radius: 1.5rem;
+            border-top-right-radius: 1.5rem;
+        }
+
+        #camera-modal #countdown-overlay {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 70;
+            font-size: 6rem;
+            font-weight: bold;
+            text-align: center;
+        }
+        #camera-modal #countdown-text {
+            animation: none;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="mobile-layout-container">
+
+    <div id="layout-options" class="flex flex-col items-center justify-center p-4 min-h-screen">
+        <h1 class="text-3xl font-bold mb-4 text-gray-800 text-center">Pilih Layout Photoboothmu</h1>
+        <p class="text-gray-500 mb-8 text-center">Mulai dengan memilih template yang kamu suka.</p>
+        <div class="grid grid-cols-2 gap-4 max-w-lg w-full">
+            <div data-layout="3" class="bg-white p-4 rounded-xl shadow-md cursor-pointer hover:shadow-lg transition-shadow">
+                <div class="photobooth-strip aspect-[3/5] rounded-lg overflow-hidden flex flex-col gap-1 p-1">
+                    <div class="photo-frame flex-1 p-1"><div class="photo-content"></div></div>
+                    <div class="photo-frame flex-1 p-1"><div class="photo-content"></div></div>
+                    <div class="photo-frame flex-1 p-1"><div class="photo-content"></div></div>
+                </div>
+                <p class="mt-2 text-center text-sm font-semibold text-gray-700">Layout A<br><span class="text-gray-500">3 Poses</span></p>
+            </div>
+            <div data-layout="4" class="bg-white p-4 rounded-xl shadow-md cursor-pointer hover:shadow-lg transition-shadow">
+                <div class="photobooth-strip aspect-[4/5] rounded-lg overflow-hidden flex flex-col gap-1 p-1">
+                    <div class="photo-frame flex-1 p-1"><div class="photo-content"></div></div>
+                    <div class="photo-frame flex-1 p-1"><div class="photo-content"></div></div>
+                    <div class="photo-frame flex-1 p-1"><div class="photo-content"></div></div>
+                    <div class="photo-frame flex-1 p-1"><div class="photo-content"></div></div>
+                </div>
+                <p class="mt-2 text-center text-sm font-semibold text-gray-700">Layout B<br><span class="text-gray-500">4 Poses</span></p>
+            </div>
+            <div data-layout="4-grid" class="bg-white p-4 rounded-xl shadow-md cursor-pointer hover:shadow-lg transition-shadow">
+                <div class="photobooth-strip is-grid aspect-[1/1] rounded-lg overflow-hidden gap-1 p-1">
+                    <div class="photo-frame p-1"><div class="photo-content"></div></div>
+                    <div class="photo-frame p-1"><div class="photo-content"></div></div>
+                    <div class="photo-frame p-1"><div class="photo-content"></div></div>
+                    <div class="photo-frame p-1"><div class="photo-content"></div></div>
+                </div>
+                <p class="mt-2 text-center text-sm font-semibold text-gray-700">Layout C<br><span class="text-gray-500">4 Poses (Grid)</span></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="editor-area" class="hidden flex-1 flex-col items-center w-full max-w-sm px-4 pb-24">
+        
+        <div class="mobile-header bg-white p-4 rounded-b-xl shadow-md flex items-center justify-between w-full max-w-sm">
+            <button id="back-btn" class="text-gray-700 hover:text-pink-500 text-lg"><i class="fas fa-arrow-left"></i></button>
+            <h1 class="text-lg font-bold text-gray-800">Edit Photobooth</h1>
+            <button id="download-btn" class="text-pink-500 hover:text-pink-600 text-lg font-semibold flex items-center gap-1">
+                <i class="fas fa-download"></i> Unduh
+            </button>
+        </div>
+
+        <div id="photobooth-strip-live" class="photobooth-strip w-full rounded-xl shadow-lg mt-8 overflow-hidden">
+            <div id="watermark-area" class="text-center py-2 text-gray-600 text-sm font-semibold">
+                <p id="custom-text" class="mb-0">photobooth</p>
+                <p id="current-date" class="text-xs"></p>
+            </div>
+        </div>
+
+        <div id="status-text" class="text-center mt-4 text-gray-600 font-semibold blinking-text">Klik frame untuk mengambil foto!</div>
+
+        <div id="delete-zone" class="fixed bottom-36 p-4 rounded-full bg-red-500 text-white shadow-lg text-2xl z-20 hidden">
+            <i class="fas fa-trash-alt"></i>
+        </div>
+
+        <button id="start-auto-capture" class="mt-8 bg-pink-500 text-white p-4 rounded-full shadow-lg hover:bg-pink-600 transition-colors">
+            <i class="fas fa-camera mr-2"></i> Mulai Otomatis
+        </button>
+        <button id="boomerang-btn" class="mt-4 bg-purple-500 text-white p-4 rounded-full shadow-lg hover:bg-purple-600 transition-colors">
+            <i class="fas fa-infinity mr-2"></i> Boomerang
+        </button>
+    </div>
+
+    <div id="bottom-nav" class="bottom-nav bg-white shadow-xl p-4 flex justify-around rounded-t-2xl hidden">
+        <button id="sticker-btn" class="menu-item flex flex-col items-center text-gray-700 hover:text-pink-500 p-2">
+            <i class="fas fa-laugh-squint text-2xl"></i>
+            <span class="text-xs">Stiker</span>
+        </button>
+        <button id="filter-btn" class="menu-item flex flex-col items-center text-gray-700 hover:text-pink-500 p-2">
+            <i class="fas fa-fill-drip text-2xl"></i>
+            <span class="text-xs">Filter</span>
+        </button>
+        <button id="text-frame-btn" class="menu-item flex flex-col items-center text-gray-700 hover:text-pink-500 p-2">
+            <i class="fas fa-pen-fancy text-2xl"></i>
+            <span class="text-xs">Edit</span>
+        </button>
+        <button id="upload-btn" class="menu-item flex flex-col items-center text-gray-700 hover:text-pink-500 p-2">
+            <i class="fas fa-images text-2xl"></i>
+            <span class="text-xs">Unggah</span>
+        </button>
+        <button id="reset-btn" class="menu-item flex flex-col items-center text-gray-700 hover:text-pink-500 p-2">
+            <i class="fas fa-sync-alt text-2xl"></i>
+            <span class="text-xs">Reset</span>
+        </button>
+        <button id="undo-btn" class="menu-item flex flex-col items-center text-gray-700 hover:text-pink-500 p-2">
+            <i class="fas fa-undo-alt text-2xl"></i>
+            <span class="text-xs">Undo</span>
+        </button>
+    </div>
+    
+    <div id="sticker-modal" class="modal bg-white rounded-t-2xl shadow-lg p-6 hidden">
+        <i id="sticker-close-btn" class="fas fa-times absolute top-4 right-4 text-2xl text-gray-400 cursor-pointer"></i>
+        <h3 class="text-2xl font-bold mb-4">Stiker</h3>
+        <div class="flex flex-wrap gap-4 px-4">
+            <img src="https://i.imgur.com/eBvJ9Gv.png" class="sticker-source w-16 h-16 cursor-pointer" draggable="false">
+            <img src="https://i.imgur.com/vHqB3qQ.png" class="sticker-source w-16 h-16 cursor-pointer" draggable="false">
+            <img src="https://i.imgur.com/A6j49Vf.png" class="sticker-source w-16 h-16 cursor-pointer" draggable="false">
+        </div>
+    </div>
+
+    <div id="filter-modal" class="modal bg-white rounded-t-2xl shadow-lg p-6 hidden">
+        <i id="filter-close-btn" class="fas fa-times absolute top-4 right-4 text-2xl text-gray-400 cursor-pointer"></i>
+        <h3 class="text-2xl font-bold mb-4">Filter</h3>
+        <div class="flex flex-wrap gap-2 px-4">
+            <button data-filter="none" class="filter-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Normal</button>
+            <button data-filter="grayscale" class="filter-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Grayscale</button>
+            <button data-filter="sepia" class="filter-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Sepia</button>
+            <button data-filter="saturate" class="filter-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Saturasi</button>
+            <button data-filter="contrast" class="filter-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Kontras</button>
+            <button data-filter="invert" class="filter-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Invert</button>
+            <button data-filter="brightness" class="filter-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Cerah</button>
+        </div>
+    </div>
+    
+    <div id="text-frame-modal" class="modal bg-white rounded-t-2xl shadow-lg p-6 hidden">
+        <i id="text-frame-close-btn" class="fas fa-times absolute top-4 right-4 text-2xl text-gray-400 cursor-pointer"></i>
+        <h3 class="text-2xl font-bold mb-4">Edit Teks & Bingkai</h3>
+        <div class="flex flex-col gap-4 px-4">
+            <div>
+                <label for="watermark-input" class="block text-sm font-medium text-gray-700 mb-1">Teks Watermark:</label>
+                <input type="text" id="watermark-input" placeholder="Teks Watermark" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-700 mb-1">Font:</p>
+                <div id="font-options" class="flex gap-2 flex-wrap">
+                    <button data-font="Quicksand" class="font-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Quicksand</button>
+                    <button data-font="Pacifico" class="font-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300" style="font-family: 'Pacifico', cursive;">Pacifico</button>
+                    <button data-font="Dancing Script" class="font-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300" style="font-family: 'Dancing Script', cursive;">Dancing</button>
+                </div>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-700 mb-1">Warna Teks:</p>
+                <div id="color-options" class="flex gap-2 flex-wrap">
+                    <button data-color="#4B5563" class="color-option w-8 h-8 rounded-full border border-gray-400" style="background-color: #4B5563;"></button>
+                    <button data-color="#E879F9" class="color-option w-8 h-8 rounded-full border border-gray-400" style="background-color: #E879F9;"></button>
+                    <button data-color="#F9A8D4" class="color-option w-8 h-8 rounded-full border border-gray-400" style="background-color: #F9A8D4;"></button>
+                </div>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-700 mb-1">Warna Latar Belakang:</p>
+                <div id="bg-color-options" class="flex gap-2 flex-wrap">
+                    <button data-bg-color="#fce4ec" class="p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Pink Muda</button>
+                    <button data-bg-color="#cffafe" class="p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Biru Muda</button>
+                    <button data-bg-color="#d9f99d" class="p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Hijau Muda</button>
+                </div>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-700 mb-1">Pola Latar Belakang:</p>
+                <div id="bg-pattern-options" class="flex gap-2 flex-wrap">
+                    <button data-bg-pattern="plaid" class="p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Plaid</button>
+                    <button data-bg-pattern="none" class="p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Tidak Ada</button>
+                </div>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-700 mb-1">Bingkai Foto:</p>
+                <div class="flex gap-2">
+                    <button data-frame="none" class="frame-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Standar</button>
+                    <button data-frame="polaroid" class="frame-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Polaroid</button>
+                </div>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-700 mb-1">Orientasi:</p>
+                <div class="flex gap-2">
+                    <button data-orientation="vertical" class="orientation-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Vertikal</button>
+                    <button data-orientation="horizontal" class="orientation-option p-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Horizontal</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <input type="file" id="file-upload" accept="image/*" class="hidden">
+
+    <div id="camera-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-xl shadow-lg relative max-w-sm w-full">
+            <h2 class="text-2xl font-bold mb-4 text-center">Ambil Foto</h2>
+            <video id="camera-stream" class="w-full rounded-lg mb-4"></video>
+            <div id="countdown-overlay" class="hidden">
+                <p id="countdown-text" class="mb-2"></p>
+                <p id="pose-instruction" class="text-3xl font-normal"></p>
+            </div>
+            <div class="flex justify-center gap-4">
+                <button id="take-photo-btn" class="py-2 px-6 bg-pink-400 text-white rounded-full text-lg font-semibold hover:bg-pink-500">Ambil</button>
+                <button id="switch-camera-btn" class="py-2 px-6 bg-blue-400 text-white rounded-full text-lg font-semibold hover:bg-blue-500">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button id="close-camera-modal-btn" class="py-2 px-6 bg-gray-400 text-white rounded-full text-lg font-semibold hover:bg-gray-500">Tutup</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="download-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-xl shadow-lg relative flex flex-col items-center max-w-sm w-full">
+            <i id="download-modal-close-btn" class="fas fa-times absolute top-4 right-4 text-2xl text-gray-400 cursor-pointer"></i>
+            <h2 class="text-2xl font-bold mb-4 text-center">Pilih Cara Unduh</h2>
+            <div id="download-options-container" class="flex flex-col items-center gap-4 w-full">
+                <button id="download-direct-btn" class="py-3 px-8 bg-pink-500 text-white rounded-full text-lg font-semibold hover:bg-pink-600 w-full transition-colors"><i class="fas fa-download mr-2"></i> Unduh Langsung</button>
+                <button id="download-qr-btn" class="py-3 px-8 bg-gray-500 text-white rounded-full text-lg font-semibold hover:bg-gray-600 w-full transition-colors"><i class="fas fa-qrcode mr-2"></i> Unduh dengan QR Code</button>
+            </div>
+            <div id="qrcode-container" class="flex flex-col items-center gap-4 hidden mt-4">
+                <p class="text-gray-600 text-center">Pindai kode QR ini dengan ponselmu!</p>
+                <canvas id="qrcode-canvas" class="w-48 h-48"></canvas>
+            </div>
+            <button id="download-modal-back-btn" class="mt-6 py-2 px-6 bg-gray-400 text-white rounded-full text-lg font-semibold hover:bg-gray-500 hidden">Kembali</button>
+        </div>
+    </div>
+    
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const layoutOptions = document.getElementById('layout-options');
+            const editorArea = document.getElementById('editor-area');
+            const photoboothStripLive = document.getElementById('photobooth-strip-live');
+            const cameraModal = document.getElementById('camera-modal');
+            const cameraStream = document.getElementById('camera-stream');
+            const takePhotoBtn = document.getElementById('take-photo-btn');
+            const closeCameraModalBtn = document.getElementById('close-camera-modal-btn');
+            const downloadBtn = document.getElementById('download-btn');
+            const downloadModal = document.getElementById('download-modal');
+            const downloadDirectBtn = document.getElementById('download-direct-btn');
+            const downloadQrBtn = document.getElementById('download-qr-btn');
+            const qrcodeContainer = document.getElementById('qrcode-container');
+            const qrcodeCanvas = document.getElementById('qrcode-canvas');
+            const downloadOptionsContainer = document.getElementById('download-options-container');
+            const downloadModalCloseBtn = document.getElementById('download-modal-close-btn');
+            const downloadModalBackBtn = document.getElementById('download-modal-back-btn');
+            const stickerBtn = document.getElementById('sticker-btn');
+            const stickerModal = document.getElementById('sticker-modal');
+            const stickerSources = document.querySelectorAll('.sticker-source');
+            const filterBtn = document.getElementById('filter-btn');
+            const filterModal = document.getElementById('filter-modal');
+            const filterOptions = document.querySelectorAll('.filter-option');
+            const statusText = document.getElementById('status-text');
+            const currentDateElement = document.getElementById('current-date');
+            const deleteZone = document.getElementById('delete-zone');
+            const countdownOverlay = document.getElementById('countdown-overlay');
+            const countdownText = document.getElementById('countdown-text');
+            const poseInstruction = document.getElementById('pose-instruction');
+            const startAutoCaptureBtn = document.getElementById('start-auto-capture');
+            const boomerangBtn = document.getElementById('boomerang-btn');
+            const textFrameBtn = document.getElementById('text-frame-btn');
+            const textFrameModal = document.getElementById('text-frame-modal');
+            const watermarkInput = document.getElementById('watermark-input');
+            const customTextElement = document.getElementById('custom-text');
+            const fontOptions = document.querySelectorAll('.font-option');
+            const colorOptions = document.querySelectorAll('.color-option');
+            const frameOptions = document.querySelectorAll('.frame-option');
+            const orientationOptions = document.querySelectorAll('.orientation-option');
+            const undoBtn = document.getElementById('undo-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const uploadBtn = document.getElementById('upload-btn');
+            const fileUpload = document.getElementById('file-upload');
+            const switchCameraBtn = document.getElementById('switch-camera-btn');
+            const bgColorOptions = document.querySelectorAll('#bg-color-options button');
+            const bgPatternOptions = document.querySelectorAll('#bg-pattern-options button');
+            const backBtn = document.getElementById('back-btn');
+            const bottomNav = document.getElementById('bottom-nav');
+
+            let currentLayout = 3;
+            let currentFrameIndex = 0;
+            let photoFrames = [];
+            let streamVideoWidth = 0;
+            let streamVideoHeight = 0;
+            const photoAspectRatio = 4 / 3;
+            let cameraStreamInstance = null;
+            let facingMode = 'user';
+            let stickersStateHistory = [];
+            let historyIndex = -1;
+            let selectedSticker = null;
+
+            const poseIdeas = [
+                "Senyum Lebar!", "Pose Keren!", "Wajah Konyol!",
+                "Love Sign!", "Pose Kekinian!", "Acungkan Jempol!",
+                "Pose Misterius!", "Gaya Menggoda!", "Pose Terkejut!"
+            ];
+
+            const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            currentDateElement.textContent = today;
+
+            // --- UI/UX Flow Logic ---
+            const modals = [stickerModal, filterModal, textFrameModal, cameraModal, downloadModal];
+            function showModal(modal) {
+                modals.forEach(m => m.classList.add('hidden'));
+                modal.classList.remove('hidden');
+                setTimeout(() => modal.classList.add('active'), 10);
+            }
+
+            function hideModal(modal) {
+                modal.classList.remove('active');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+            
+            stickerBtn.addEventListener('click', () => showModal(stickerModal));
+            filterBtn.addEventListener('click', () => showModal(filterModal));
+            textFrameBtn.addEventListener('click', () => showModal(textFrameModal));
+            document.getElementById('sticker-close-btn').addEventListener('click', () => hideModal(stickerModal));
+            document.getElementById('filter-close-btn').addEventListener('click', () => hideModal(filterModal));
+            document.getElementById('text-frame-close-btn').addEventListener('click', () => hideModal(textFrameModal));
+            closeCameraModalBtn.addEventListener('click', closeCameraModal);
+            downloadModalCloseBtn.addEventListener('click', () => hideModal(downloadModal));
+            downloadModalBackBtn.addEventListener('click', () => {
+                qrcodeContainer.classList.add('hidden');
+                downloadOptionsContainer.classList.remove('hidden');
+                downloadModalBackBtn.classList.add('hidden');
+            });
+            backBtn.addEventListener('click', () => {
+                editorArea.classList.add('hidden');
+                layoutOptions.classList.remove('hidden');
+                bottomNav.classList.add('hidden');
+                resetEditor();
+            });
+
+            // Handle Clicks Outside Modals
+            modals.forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('modal')) {
+                        hideModal(modal);
+                    }
+                });
+            });
+
+            // Initial Layout Selection
+            layoutOptions.addEventListener('click', (e) => {
+                const layoutDiv = e.target.closest('[data-layout]');
+                if (layoutDiv) {
+                    currentLayout = layoutDiv.dataset.layout;
+
+                    layoutOptions.classList.add('hidden');
+                    editorArea.classList.remove('hidden');
+                    bottomNav.classList.remove('hidden');
+
+                    createLayout(currentLayout);
+                    updateStatusText();
+                }
+            });
+
+            function createLayout(layoutType, orientation = 'vertical') {
+                const existingWatermark = photoboothStripLive.querySelector('#watermark-area');
+                photoboothStripLive.innerHTML = '';
+                if (existingWatermark) {
+                    photoboothStripLive.appendChild(existingWatermark);
+                }
+                
+                let numPhotos = 0;
+                photoboothStripLive.className = 'photobooth-strip w-full rounded-xl shadow-lg mt-8 overflow-hidden';
+                if (layoutType === '3') {
+                    numPhotos = 3;
+                    photoboothStripLive.style.aspectRatio = orientation === 'vertical' ? `3/5` : `5/3`;
+                    photoboothStripLive.classList.add('flex', 'flex-col', 'gap-1', 'p-1');
+                    if (orientation === 'horizontal') {
+                        photoboothStripLive.classList.add('flex-row');
+                        photoboothStripLive.classList.remove('flex-col');
+                    }
+                } else if (layoutType === '4') {
+                    numPhotos = 4;
+                    photoboothStripLive.style.aspectRatio = orientation === 'vertical' ? `4/5` : `5/4`;
+                    photoboothStripLive.classList.add('flex', 'flex-col', 'gap-1', 'p-1');
+                    if (orientation === 'horizontal') {
+                        photoboothStripLive.classList.add('flex-row');
+                        photoboothStripLive.classList.remove('flex-col');
+                    }
+                } else if (layoutType === '4-grid') {
+                    numPhotos = 4;
+                    photoboothStripLive.style.aspectRatio = `1/1`;
+                    photoboothStripLive.classList.add('is-grid');
+                }
+
+                photoFrames = [];
+                for (let i = 0; i < numPhotos; i++) {
+                    const frame = document.createElement('div');
+                    frame.classList.add('photo-frame');
+                    frame.style.setProperty('--frame-type', 'none');
+                    
+                    const photoContent = document.createElement('div');
+                    photoContent.classList.add('photo-content');
+                    photoContent.id = `photo-content-${i}`;
+                    photoContent.dataset.filter = 'none';
+                    
+                    frame.appendChild(photoContent);
+                    photoContent.addEventListener('click', (event) => {
+                        if (!event.target.classList.contains('draggable-sticker')) {
+                            openCameraModal(i);
+                        }
+                    });
+                    photoboothStripLive.appendChild(frame);
+                    photoFrames.push(photoContent);
+                }
+            }
+
+            async function openCameraModal(index) {
+                currentFrameIndex = index;
+                showModal(cameraModal);
+                
+                try {
+                    const constraints = {
+                        video: {
+                            facingMode: facingMode,
+                            width: { ideal: 1280 },
+                            height: { ideal: 960 },
+                            aspectRatio: { exact: photoAspectRatio }
+                        }
+                    };
+                    cameraStreamInstance = await navigator.mediaDevices.getUserMedia(constraints);
+                    cameraStream.srcObject = cameraStreamInstance;
+                    cameraStream.play();
+
+                    cameraStream.onloadedmetadata = () => {
+                        streamVideoWidth = cameraStream.videoWidth;
+                        streamVideoHeight = cameraStream.videoHeight;
+                    };
+                } catch (err) {
+                    alert("Gagal mengakses kamera. Pastikan Anda memberikan izin dan menggunakan HTTPS. Error: " + err.message);
+                    console.error("Camera access error:", err);
+                    hideModal(cameraModal);
+                }
+            }
+
+            switchCameraBtn.addEventListener('click', () => {
+                facingMode = facingMode === 'user' ? 'environment' : 'user';
+                closeCameraModal();
+                openCameraModal(currentFrameIndex);
+            });
+            
+            takePhotoBtn.addEventListener('click', () => {
+                capturePhoto(currentFrameIndex);
+                closeCameraModal();
+            });
+
+            function capturePhoto(index) {
+                const canvas = document.createElement('canvas');
+                canvas.width = streamVideoWidth || 1280;
+                canvas.height = streamVideoHeight || 960;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(cameraStream, 0, 0, canvas.width, canvas.height);
+                const photoUrl = canvas.toDataURL('image/png');
+                
+                const photoContentDiv = photoFrames[index];
+                const imgElement = document.createElement('img');
+                imgElement.src = photoUrl;
+                imgElement.className = `filter-${photoContentDiv.dataset.filter}`;
+                photoContentDiv.innerHTML = '';
+                photoContentDiv.appendChild(imgElement);
+            }
+
+            function closeCameraModal() {
+                hideModal(cameraModal);
+                if (cameraStreamInstance) {
+                    cameraStreamInstance.getTracks().forEach(track => track.stop());
+                }
+                updateStatusText();
+            }
+
+            startAutoCaptureBtn.addEventListener('click', async () => {
+                startAutoCaptureBtn.classList.add('hidden');
+                boomerangBtn.classList.add('hidden');
+                statusText.style.display = 'none';
+
+                try {
+                    await openCameraModal(0);
+                    // Sembunyikan tombol-tombol dan tampilkan overlay hitungan mundur
+                    takePhotoBtn.style.display = 'none';
+                    switchCameraBtn.style.display = 'none';
+                    closeCameraModalBtn.style.display = 'none';
+                    countdownOverlay.classList.remove('hidden');
+
+                    for (let i = 0; i < photoFrames.length; i++) {
+                        const randomPose = poseIdeas[Math.floor(Math.random() * poseIdeas.length)];
+                        poseInstruction.textContent = randomPose;
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                        await countdown(3);
+                        capturePhoto(i);
+                    }
+                    // Sembunyikan overlay dan kembalikan tombol
+                    countdownOverlay.classList.add('hidden');
+                    takePhotoBtn.style.display = '';
+                    switchCameraBtn.style.display = '';
+                    closeCameraModalBtn.style.display = '';
+                    closeCameraModal();
+                    updateStatusText();
+                } catch (err) {
+                    console.error("Auto capture error:", err);
+                    countdownOverlay.classList.add('hidden');
+                    takePhotoBtn.style.display = '';
+                    switchCameraBtn.style.display = '';
+                    closeCameraModalBtn.style.display = '';
+                    closeCameraModal();
+                    alert("Gagal menyelesaikan sesi pengambilan foto otomatis.");
+                } finally {
+                    poseInstruction.textContent = '';
+                    countdownText.textContent = '';
+                }
+            });
+
+            boomerangBtn.addEventListener('click', async () => {
+                const totalFrames = photoFrames.length;
+                if (totalFrames < 2) {
+                    alert("Boomerang memerlukan minimal 2 frame foto. Pilih layout dengan 3 atau 4 foto!");
+                    return;
+                }
+                
+                startAutoCaptureBtn.classList.add('hidden');
+                boomerangBtn.classList.add('hidden');
+                statusText.style.display = 'none';
+                countdownOverlay.classList.remove('hidden');
+                countdownOverlay.classList.add('flex-col');
+
+                const tempPhotos = [];
+
+                try {
+                    await openCameraModal(0);
+                    for (let i = 0; i < totalFrames; i++) {
+                        const randomPose = poseIdeas[Math.floor(Math.random() * poseIdeas.length)];
+                        poseInstruction.textContent = randomPose;
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                        await countdown(1);
+                        const canvas = document.createElement('canvas');
+                        canvas.width = streamVideoWidth || 1280;
+                        canvas.height = streamVideoHeight || 960;
+                        const ctx = canvas.getContext('2d');
+                        ctx.translate(canvas.width, 0);
+                        ctx.scale(-1, 1);
+                        ctx.drawImage(cameraStream, 0, 0, canvas.width, canvas.height);
+                        tempPhotos.push(canvas.toDataURL('image/png'));
+                    }
+                    
+                    for (let i = 0; i < totalFrames; i++) {
+                        const imgElement = document.createElement('img');
+                        imgElement.src = tempPhotos[i];
+                        imgElement.className = `filter-none`;
+                        photoFrames[i].innerHTML = '';
+                        photoFrames[i].appendChild(imgElement);
+                    }
+                    
+                    countdownOverlay.classList.add('hidden');
+                    closeCameraModal();
+                    updateStatusText();
+                } catch (err) {
+                    console.error("Boomerang capture error:", err);
+                    countdownOverlay.classList.add('hidden');
+                    closeCameraModal();
+                    alert("Gagal menyelesaikan sesi Boomerang.");
+                } finally {
+                    poseInstruction.textContent = '';
+                    countdownText.textContent = '';
+                }
+            });
+
+            function countdown(seconds) {
+                return new Promise(resolve => {
+                    let count = seconds;
+                    countdownText.textContent = count;
+                    const timer = setInterval(() => {
+                        count--;
+                        if (count > 0) {
+                            countdownText.textContent = count;
+                        } else {
+                            countdownText.textContent = '📸';
+                            clearInterval(timer);
+                            setTimeout(resolve, 500);
+                        }
+                    }, 1000);
+                });
+            }
+
+            uploadBtn.addEventListener('click', () => {
+                fileUpload.click();
+            });
+            resetBtn.addEventListener('click', () => {
+                resetEditor();
+            });
+            fileUpload.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const imgUrl = e.target.result;
+                        const targetFrame = photoFrames.find(frame => !frame.querySelector('img')) || photoFrames[0];
+                        if (targetFrame) {
+                            const imgElement = document.createElement('img');
+                            imgElement.src = imgUrl;
+                            imgElement.className = `filter-${targetFrame.dataset.filter}`;
+                            targetFrame.innerHTML = '';
+                            targetFrame.appendChild(imgElement);
+                            updateStatusText();
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            filterOptions.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const filterName = e.target.dataset.filter;
+                    photoFrames.forEach((photoContentDiv) => {
+                        const img = photoContentDiv.querySelector('img');
+                        if (img) {
+                            img.className = `filter-${filterName}`;
+                            photoContentDiv.dataset.filter = filterName;
+                        }
+                    });
+                    hideModal(filterModal);
+                });
+            });
+
+            watermarkInput.addEventListener('input', (e) => {
+                customTextElement.textContent = e.target.value || 'photobooth';
+            });
+            
+            fontOptions.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    const fontName = e.target.dataset.dataset.font;
+                    customTextElement.style.fontFamily = `'${fontName}', sans-serif`;
+                });
+            });
+
+            colorOptions.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    const color = e.target.dataset.color;
+                    customTextElement.style.color = color;
+                    currentDateElement.style.color = color;
+                });
+            });
+
+            bgColorOptions.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    document.body.style.backgroundColor = e.target.dataset.bgColor;
+                    document.body.style.backgroundImage = 'none';
+                });
+            });
+            
+            bgPatternOptions.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    const pattern = e.target.dataset.bgPattern;
+                    if (pattern === 'plaid') {
+                            document.body.style.backgroundImage = `repeating-linear-gradient(45deg, #f8bbd0 0 5px, transparent 5px 10px), repeating-linear-gradient(-45deg, #f48fb1 0 5px, transparent 5px 10px)`;
+                            document.body.style.backgroundColor = '#fce4ec';
+                    } else {
+                        document.body.style.backgroundImage = 'none';
+                    }
+                });
+            });
+
+            frameOptions.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    const frameType = e.target.dataset.frame;
+                    photoboothStripLive.dataset.frame = frameType;
+                });
+            });
+
+            orientationOptions.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    const orientation = e.target.dataset.orientation;
+                    createLayout(currentLayout, orientation);
+                });
+            });
+
+            function resetEditor() {
+                photoFrames.forEach(frame => {
+                    frame.innerHTML = '';
+                    frame.dataset.filter = 'none';
+                });
+                photoboothStripLive.querySelectorAll('.draggable-sticker').forEach(s => s.remove());
+                watermarkInput.value = '';
+                customTextElement.textContent = 'photobooth';
+                customTextElement.style.fontFamily = `'Quicksand', sans-serif`;
+                customTextElement.style.color = '#4B5563';
+                currentDateElement.style.color = '#4B5563';
+                photoboothStripLive.dataset.frame = 'none';
+                updateStatusText();
+                stickersStateHistory = [];
+                historyIndex = -1;
+                selectedSticker = null;
+            }
+
+            function saveStickerState() {
+                if (historyIndex < stickersStateHistory.length - 1) {
+                    stickersStateHistory = stickersStateHistory.slice(0, historyIndex + 1);
+                }
+                const currentStickers = Array.from(photoboothStripLive.querySelectorAll('.draggable-sticker')).map(s => ({
+                    src: s.src,
+                    left: s.style.left,
+                    top: s.style.top,
+                    width: s.style.width,
+                    transform: s.style.transform
+                }));
+                stickersStateHistory.push(currentStickers);
+                historyIndex++;
+            }
+
+            undoBtn.addEventListener('click', () => {
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    const previousState = stickersStateHistory[historyIndex];
+                    photoboothStripLive.querySelectorAll('.draggable-sticker').forEach(s => s.remove());
+                    previousState.forEach(stickerData => {
+                        const newSticker = document.createElement('img');
+                        newSticker.src = stickerData.src;
+                        newSticker.classList.add('draggable-sticker');
+                        newSticker.style.left = stickerData.left;
+                        newSticker.style.top = stickerData.top;
+                        newSticker.style.width = stickerData.width;
+                        newSticker.style.transform = stickerData.transform;
+                        photoboothStripLive.appendChild(newSticker);
+                        addStickerControls(newSticker);
+                    });
+                }
+            });
+
+            // --- Sticker Drag/Touch Logic ---
+            stickerSources.forEach(item => {
+                item.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const stickerSrc = e.target.src;
+                    const newSticker = document.createElement('img');
+                    newSticker.src = stickerSrc;
+                    newSticker.classList.add('draggable-sticker');
+                    newSticker.style.width = '20%';
+                    newSticker.style.transform = 'translate(-50%, -50%)';
+                    
+                    const rect = photoboothStripLive.getBoundingClientRect();
+                    newSticker.style.left = `${e.touches[0].clientX - rect.left}px`;
+                    newSticker.style.top = `${e.touches[0].clientY - rect.top}px`;
+                    
+                    photoboothStripLive.appendChild(newSticker);
+                    addStickerControls(newSticker);
+                    selectedSticker = newSticker;
+                    newSticker.classList.add('selected-sticker');
+                    hideModal(stickerModal);
+                    saveStickerState();
+                });
+            });
+
+            function addStickerControls(element) {
+                let isDragging = false;
+                let startX, startY;
+                let initialX, initialY;
+                
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (selectedSticker) {
+                        selectedSticker.classList.remove('selected-sticker');
+                    }
+                    selectedSticker = element;
+                    element.classList.add('selected-sticker');
+                });
+
+                element.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    isDragging = true;
+                    const touch = e.touches[0];
+                    startX = touch.clientX;
+                    startY = touch.clientY;
+                    const style = window.getComputedStyle(element);
+                    initialX = parseFloat(style.left);
+                    initialY = parseFloat(style.top);
+                    deleteZone.classList.remove('hidden');
+                    deleteZone.classList.add('delete-zone-active');
+                });
+
+                document.addEventListener('touchmove', (e) => {
+                    if (isDragging) {
+                        const touch = e.touches[0];
+                        const dx = touch.clientX - startX;
+                        const dy = touch.clientY - startY;
+                        const newX = initialX + dx;
+                        const newY = initialY + dy;
+                        element.style.left = `${newX}px`;
+                        element.style.top = `${newY}px`;
+                    }
+                });
+
+                document.addEventListener('touchend', (e) => {
+                    if (isDragging) {
+                        isDragging = false;
+                        const rect = deleteZone.getBoundingClientRect();
+                        const touch = e.changedTouches[0];
+                        if (touch.clientX >= rect.left && touch.clientX <= rect.right && touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                            element.remove();
+                            saveStickerState();
+                        }
+                        deleteZone.classList.add('hidden');
+                        deleteZone.classList.remove('delete-zone-active');
+                    }
+                });
+            }
+
+            photoboothStripLive.querySelectorAll('.draggable-sticker').forEach(addStickerControls);
+
+            downloadBtn.addEventListener('click', async () => {
+                const totalFilledFrames = photoFrames.filter(frame => frame.querySelector('img')).length;
+                if (totalFilledFrames === 0) {
+                    alert('Tidak ada foto untuk diunduh.');
+                    return;
+                }
+                showModal(downloadModal);
+            });
+            
+            downloadDirectBtn.addEventListener('click', async () => {
+                downloadDirectBtn.disabled = true;
+                const dataUrl = await processAndGenerateDataUrl();
+                
+                const link = document.createElement('a');
+                link.download = 'photobooth_hasil.png';
+                link.href = dataUrl;
+                link.click();
+                downloadDirectBtn.disabled = false;
+                hideModal(downloadModal);
+            });
+
+            downloadQrBtn.addEventListener('click', async () => {
+                downloadQrBtn.classList.add('unduh-loading');
+                downloadOptionsContainer.classList.add('hidden');
+                
+                const dataUrl = await processAndGenerateDataUrl();
+                
+                qrcodeContainer.classList.remove('hidden');
+                downloadModalBackBtn.classList.remove('hidden');
+                
+                qrcodeCanvas.innerHTML = '';
+                new QRCode(qrcodeCanvas, {
+                    text: dataUrl,
+                    width: 192,
+                    height: 192,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+                
+                downloadQrBtn.classList.remove('unduh-loading');
+            });
+            
+            async function processAndGenerateDataUrl() {
+                const canvas = document.createElement('canvas');
+                const photoboothStripLive = document.getElementById('photobooth-strip-live');
+                const rect = photoboothStripLive.getBoundingClientRect();
+                const targetWidth = 1080;
+                const targetHeight = targetWidth / (rect.width / rect.height);
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext('2d');
+                
+                // Draw background
+                const bodyBgColor = window.getComputedStyle(document.body).backgroundColor;
+                const bodyBgImage = window.getComputedStyle(document.body).backgroundImage;
+                if (bodyBgImage && bodyBgImage !== 'none') {
+                    // This is a placeholder, a real implementation would need to draw the pattern.
+                    // For simplicity, we just use the background color.
+                    ctx.fillStyle = bodyBgColor;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                } else {
+                    ctx.fillStyle = bodyBgColor;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+
+                // Get elements to draw
+                const elementsToDraw = Array.from(photoboothStripLive.children).filter(el => el.id !== 'countdown-overlay');
+
+                // Draw each element onto the canvas
+                for (const el of elementsToDraw) {
+                    const elRect = el.getBoundingClientRect();
+                    const scaleX = targetWidth / rect.width;
+                    const scaleY = targetHeight / rect.height;
+                    const elX = (elRect.left - rect.left) * scaleX;
+                    const elY = (elRect.top - rect.top) * scaleY;
+                    const elWidth = elRect.width * scaleX;
+                    const elHeight = elRect.height * scaleY;
+
+                    if (el.tagName === 'DIV' && el.classList.contains('photo-frame')) {
+                        const imgEl = el.querySelector('img');
+                        if (imgEl) {
+                            const img = new Image();
+                            img.crossOrigin = 'anonymous';
+                            img.src = imgEl.src;
+                            await new Promise(resolve => img.onload = resolve);
+                            ctx.drawImage(img, elX, elY, elWidth, elHeight);
+                        }
+                    } else if (el.tagName === 'IMG' && el.classList.contains('draggable-sticker')) {
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.src = el.src;
+                        await new Promise(resolve => img.onload = resolve);
+                        const stickerWidth = parseFloat(el.style.width);
+                        const scaledStickerWidth = (stickerWidth / 100) * targetWidth;
+                        const stickerHeight = (scaledStickerWidth / img.naturalWidth) * img.naturalHeight;
+                        const left = parseFloat(el.style.left);
+                        const top = parseFloat(el.style.top);
+                        const scaledX = (left / rect.width) * targetWidth;
+                        const scaledY = (top / rect.height) * targetHeight;
+                        ctx.drawImage(img, scaledX - scaledStickerWidth / 2, scaledY - stickerHeight / 2, scaledStickerWidth, stickerHeight);
+                    } else {
+                         // Fallback for other elements like text (watermark-area)
+                        if (el.id === 'watermark-area') {
+                            const customText = el.querySelector('#custom-text').textContent;
+                            const dateText = el.querySelector('#current-date').textContent;
+                            const customTextEl = el.querySelector('#custom-text');
+                            const dateEl = el.querySelector('#current-date');
+                            const fontName = customTextEl.style.fontFamily || 'Quicksand';
+                            const textColor = customTextEl.style.color || '#4B5563';
+
+                            ctx.fillStyle = textColor;
+                            ctx.textAlign = 'center';
+                            const watermarkAreaHeight = elRect.height * scaleY;
+                            const mainFontSize = watermarkAreaHeight * 0.35;
+                            const dateFontSize = watermarkAreaHeight * 0.2;
+                            const paddingTop = watermarkAreaHeight * 0.1;
+                            
+                            ctx.font = `700 ${mainFontSize}px '${fontName}'`;
+                            ctx.fillText(customText, canvas.width / 2, elY + paddingTop);
+                            
+                            ctx.font = `400 ${dateFontSize}px '${fontName}'`;
+                            ctx.fillText(dateText, canvas.width / 2, elY + paddingTop + mainFontSize + (watermarkAreaHeight * 0.05));
+                        }
+                    }
+                }
+                
+                return canvas.toDataURL('image/png');
+            }
+
+            function updateStatusText() {
+                const totalFrames = photoFrames.length;
+                let filledFrames = 0;
+                photoFrames.forEach(frame => {
+                    if (frame.querySelector('img')) {
+                        filledFrames++;
+                    }
+                });
+
+                if (filledFrames === totalFrames) {
+                    statusText.textContent = "Selesai! Sekarang kamu bisa mengunduh atau menambahkan stiker.";
+                    statusText.classList.remove('blinking-text');
+                    startAutoCaptureBtn.classList.add('hidden');
+                    boomerangBtn.classList.add('hidden');
+                } else {
+                    statusText.textContent = `Klik frame untuk mengambil foto (${filledFrames}/${totalFrames}) atau klik Mulai Otomatis!`;
+                    statusText.classList.add('blinking-text');
+                    startAutoCaptureBtn.classList.remove('hidden');
+                    boomerangBtn.classList.remove('hidden');
+                }
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const layoutFromURL = urlParams.get('layout');
+            if (layoutFromURL) {
+                currentLayout = layoutFromURL;
+                layoutOptions.classList.add('hidden');
+                editorArea.classList.remove('hidden');
+                bottomNav.classList.remove('hidden');
+                createLayout(currentLayout);
+                updateStatusText();
+            } else {
+                layoutOptions.classList.remove('hidden');
+                editorArea.classList.add('hidden');
+                bottomNav.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
